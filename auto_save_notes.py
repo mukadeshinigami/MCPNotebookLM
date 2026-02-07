@@ -1,17 +1,17 @@
 """
-Модуль для автоматического сохранения ответов NotebookLM в заметки.
+Module for automatically saving NotebookLM responses as notes.
 
-Этот модуль предоставляет функцию для автоматического сохранения ответов
-от NotebookLM как текстовых источников (заметок) в блокнот с префиксом "Заметка:".
+This module provides functionality to automatically save responses
+from NotebookLM as text sources (notes) in a notebook with "Note:" prefix.
 
-Использование:
+Usage:
     from auto_save_notes import save_answer_as_note
     
-    # Сохранение ответа
+    # Save response
     source_id = save_answer_as_note(
         notebook_id="your-notebook-id",
-        question="Ваш вопрос",
-        answer="Ответ от NotebookLM",
+        question="Your question",
+        answer="Response from NotebookLM",
         client=notebooklm_client
     )
 """
@@ -30,53 +30,53 @@ def save_answer_as_note(
     note_prefix: Optional[str] = None
 ) -> Optional[str]:
     """
-    Сохраняет ответ от NotebookLM как заметку (текстовый источник) в блокнот.
+    Saves NotebookLM response as a note (text source) in notebook.
     
     Args:
-        notebook_id: ID блокнота, в который нужно сохранить заметку
-        question: Вопрос, на который был получен ответ
-        answer: Ответ от NotebookLM
-        client: Опциональный клиент NotebookLM. Если не указан, будет создан автоматически
-        note_prefix: Префикс для названия заметки (по умолчанию из конфигурации)
+        notebook_id: Notebook ID where to save the note
+        question: Question that received the answer
+        answer: Response from NotebookLM
+        client: Optional NotebookLM client. If not specified, will be created automatically
+        note_prefix: Prefix for note title (default from configuration)
     
     Returns:
-        ID созданного источника или None в случае ошибки
+        ID of created source or None on error
     
     Example:
         >>> source_id = save_answer_as_note(
         ...     notebook_id="abc123",
-        ...     question="Что такое Python?",
-        ...     answer="Python - это язык программирования..."
+        ...     question="What is Python?",
+        ...     answer="Python is a programming language..."
         ... )
-        >>> print(f"Заметка сохранена с ID: {source_id}")
+        >>> print(f"Note saved with ID: {source_id}")
     """
-    # Получаем конфигурацию
+    # Get configuration
     config = get_config()
     
-    # Создаем клиент, если не передан
+    # Create client if not provided
     if client is None:
         client = get_notebooklm_client()
         if not client:
-            print("❌ Ошибка: Токены не найдены. Запустите notebooklm-mcp-auth")
+            print("❌ Error: Tokens not found. Run notebooklm-mcp-auth")
             return None
     
-    # Используем префикс из параметра или конфигурации
+    # Use prefix from parameter or configuration
     prefix = note_prefix or config.note_prefix
     
-    # Формируем название заметки через конфигурацию
+    # Generate note title via configuration
     note_title = config.get_note_title(question)
-    # Если передан кастомный префикс, заменяем его
+    # If custom prefix provided, replace it
     if note_prefix:
         note_title = f"{note_prefix} {note_title.split(' ', 1)[1] if ' ' in note_title else note_title}"
     
-    # Формируем полный текст заметки
-    # Включаем вопрос для контекста
-    full_note_text = f"""Вопрос: {question}
+    # Format full note text
+    # Include question for context
+    full_note_text = f"""Question: {question}
 
 {answer}"""
     
     try:
-        # Добавляем текстовый источник
+        # Add text source
         result = client.add_text_source(
             notebook_id=notebook_id,
             text=full_note_text,
@@ -86,18 +86,18 @@ def save_answer_as_note(
         if result:
             source_id = result.get('sourceId') or result.get('id') or result.get('source', {}).get('id')
             if source_id:
-                print(f"✅ Заметка сохранена: {note_title}")
-                print(f"   ID источника: {source_id}")
+                print(f"✅ Note saved: {note_title}")
+                print(f"   Source ID: {source_id}")
                 return source_id
             else:
-                print(f"⚠️  Заметка добавлена, но ID не получен: {note_title}")
+                print(f"⚠️  Note added but ID not received: {note_title}")
                 return None
         else:
-            print(f"❌ Ошибка: Не удалось сохранить заметку: {note_title}")
+            print(f"❌ Error: Failed to save note: {note_title}")
             return None
             
     except Exception as e:
-        print(f"❌ Ошибка при сохранении заметки: {e}")
+        print(f"❌ Error saving note: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -111,55 +111,55 @@ def query_and_save(
     note_prefix: Optional[str] = None
 ) -> Tuple[Optional[str], Optional[str]]:
     """
-    Выполняет запрос к блокноту и автоматически сохраняет ответ как заметку.
+    Executes query to notebook and automatically saves response as note.
     
     Args:
-        notebook_id: ID блокнота
-        question: Вопрос для запроса
-        client: Опциональный клиент NotebookLM
-        auto_save: Автоматически сохранять ответ как заметку (по умолчанию из конфигурации)
-        note_prefix: Префикс для названия заметки (по умолчанию из конфигурации)
+        notebook_id: Notebook ID
+        question: Question for query
+        client: Optional NotebookLM client
+        auto_save: Automatically save response as note (default from configuration)
+        note_prefix: Prefix for note title (default from configuration)
     
     Returns:
-        Кортеж (ответ, ID_источника) или (None, None) в случае ошибки
+        Tuple (answer, source_id) or (None, None) on error
     
     Example:
         >>> answer, source_id = query_and_save(
         ...     notebook_id="abc123",
-        ...     question="Что такое Python?",
+        ...     question="What is Python?",
         ...     auto_save=True
         ... )
-        >>> print(f"Ответ: {answer}")
-        >>> print(f"Заметка ID: {source_id}")
+        >>> print(f"Answer: {answer}")
+        >>> print(f"Note ID: {source_id}")
     """
-    # Получаем конфигурацию
+    # Get configuration
     config = get_config()
     
-    # Создаем клиент, если не передан
+    # Create client if not provided
     if client is None:
         client = get_notebooklm_client()
         if not client:
-            print("❌ Ошибка: Токены не найдены. Запустите notebooklm-mcp-auth")
+            print("❌ Error: Tokens not found. Run notebooklm-mcp-auth")
             return None, None
     
-    # Используем значение из параметра или конфигурации
+    # Use value from parameter or configuration
     should_save = auto_save if auto_save is not None else config.default_auto_save
     
-    # Выполняем запрос
+    # Execute query
     try:
         response = client.query(notebook_id, question)
         
-        # Извлекаем ответ, если это объект с полем answer
+        # Extract answer if it's an object with answer field
         if isinstance(response, dict):
             answer = response.get('answer') or response.get('response') or str(response)
         else:
             answer = response
         
         if not answer:
-            print("❌ Не удалось получить ответ от NotebookLM")
+            print("❌ Failed to get response from NotebookLM")
             return None, None
         
-        # Автоматически сохраняем как заметку, если включено
+        # Automatically save as note if enabled
         source_id = None
         if should_save:
             source_id = save_answer_as_note(
@@ -173,7 +173,7 @@ def query_and_save(
         return answer, source_id
         
     except Exception as e:
-        print(f"❌ Ошибка при запросе: {e}")
+        print(f"❌ Error during query: {e}")
         import traceback
         traceback.print_exc()
         return None, None

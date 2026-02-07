@@ -1,15 +1,15 @@
 """
-Фабрика для создания клиентов NotebookLM.
+Factory for creating NotebookLM clients.
 
-Проблема, которую решает:
-- Дублирование кода создания клиента в 4+ местах
-- Нет единой точки управления аутентификацией
-- Сложно тестировать (нет возможности подменить клиент)
+Problem it solves:
+- Duplication of client creation code in 4+ places
+- No single point of authentication management
+- Hard to test (no way to mock the client)
 
-Решение:
-- Singleton-паттерн для единого экземпляра клиента
-- Ленивая инициализация (создается только при первом запросе)
-- Централизованная обработка ошибок аутентификации
+Solution:
+- Singleton pattern for a single client instance
+- Lazy initialization (created only on first request)
+- Centralized authentication error handling
 """
 
 from typing import Optional
@@ -19,49 +19,49 @@ from notebooklm_mcp.api_client import NotebookLMClient
 
 class ClientFactory:
     """
-    Фабрика для создания и управления клиентами NotebookLM.
+    Factory for creating and managing NotebookLM clients.
     
-    Использует Singleton-паттерн для переиспользования одного клиента
-    в рамках сессии приложения.
+    Uses Singleton pattern to reuse a single client
+    within the application session.
     
-    Почему Singleton здесь уместен:
-    - Клиент содержит состояние (cookies, session_id)
-    - Переиспользование экономит ресурсы
-    - Избегаем множественных проверок токенов
+    Why Singleton is appropriate here:
+    - Client contains state (cookies, session_id)
+    - Reuse saves resources
+    - Avoid multiple token checks
     """
     
     _instance: Optional['ClientFactory'] = None
     _client: Optional[NotebookLMClient] = None
     
     def __new__(cls):
-        """Singleton: возвращает один экземпляр фабрики."""
+        """Singleton: returns a single factory instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
     
     def get_client(self, force_new: bool = False) -> Optional[NotebookLMClient]:
         """
-        Получает или создает клиент NotebookLM.
+        Gets or creates a NotebookLM client.
         
         Args:
-            force_new: Принудительно создать новый клиент (для тестирования)
+            force_new: Force creation of a new client (for testing)
         
         Returns:
-            NotebookLMClient или None, если токены не найдены
+            NotebookLMClient or None if tokens not found
         
         Raises:
-            RuntimeError: Если токены не найдены (можно изменить на кастомное исключение)
+            RuntimeError: If tokens not found (can be changed to custom exception)
         """
-        # Если клиент уже создан и не требуется новый - возвращаем существующий
+        # If client already created and new one not required - return existing
         if self._client is not None and not force_new:
             return self._client
         
-        # Загружаем токены
+        # Load tokens
         tokens = load_cached_tokens()
         if not tokens:
             return None
         
-        # Создаем новый клиент
+        # Create new client
         self._client = NotebookLMClient(
             cookies=tokens.cookies,
             csrf_token=tokens.csrf_token,
@@ -72,28 +72,28 @@ class ClientFactory:
     
     def reset(self):
         """
-        Сбрасывает кэшированный клиент.
+        Resets the cached client.
         
-        Полезно для:
-        - Тестирования
-        - Переподключения после истечения сессии
-        - Сброса состояния
+        Useful for:
+        - Testing
+        - Reconnecting after session expiration
+        - Resetting state
         """
         self._client = None
     
     @classmethod
     def create_client(cls) -> Optional[NotebookLMClient]:
         """
-        Удобный метод для быстрого создания клиента.
+        Convenient method for quick client creation.
         
-        Использование:
+        Usage:
             client = ClientFactory.create_client()
             if not client:
-                print("Ошибка аутентификации")
+                print("Authentication error")
                 return
         
         Returns:
-            NotebookLMClient или None
+            NotebookLMClient or None
         """
         factory = cls()
         return factory.get_client()
@@ -101,16 +101,16 @@ class ClientFactory:
 
 def get_notebooklm_client() -> Optional[NotebookLMClient]:
     """
-    Удобная функция-обертка для получения клиента.
+    Convenient wrapper function for getting a client.
     
-    Использование:
+    Usage:
         client = get_notebooklm_client()
         if not client:
-            print("❌ Ошибка: Токены не найдены. Запустите notebooklm-mcp-auth")
+            print("❌ Error: Tokens not found. Run notebooklm-mcp-auth")
             return
     
     Returns:
-        NotebookLMClient или None
+        NotebookLMClient or None
     """
     return ClientFactory.create_client()
 

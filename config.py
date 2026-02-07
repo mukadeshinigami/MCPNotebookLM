@@ -1,15 +1,15 @@
 """
-Централизованная конфигурация приложения.
+Centralized application configuration.
 
-Проблема, которую решает:
-- Хардкод значений (префиксы, лимиты) в разных местах
-- Нет единого места для настроек
-- Сложно менять поведение без правки кода
+Problem it solves:
+- Hardcoded values (prefixes, limits) in different places
+- No single place for settings
+- Hard to change behavior without code changes
 
-Решение:
-- Класс Config с настройками по умолчанию
-- Возможность переопределения через переменные окружения
-- Типизированные значения для IDE-подсказок
+Solution:
+- Config class with default settings
+- Ability to override via environment variables
+- Typed values for IDE hints
 """
 
 from dataclasses import dataclass
@@ -20,41 +20,41 @@ import os
 @dataclass
 class Config:
     """
-    Конфигурация приложения.
+    Application configuration.
     
-    Использует dataclass для:
-    - Автоматической генерации __init__, __repr__
-    - Типизации полей
-    - Удобного доступа к настройкам
+    Uses dataclass for:
+    - Automatic generation of __init__, __repr__
+    - Field typing
+    - Convenient access to settings
     """
     
-    # Настройки заметок
-    note_prefix: str = "Заметка:"
+    # Note settings
+    note_prefix: str = "Note:"
     note_max_title_length: int = 50
     
-    # Настройки запросов
+    # Query settings
     default_auto_save: bool = True
     default_use_optimization: bool = True
-    query_timeout: Optional[int] = None  # None = без таймаута
+    query_timeout: Optional[int] = None  # None = no timeout
     
-    # Настройки вывода
-    verbose: bool = True  # Показывать ли информационные сообщения
+    # Output settings
+    verbose: bool = True  # Show informational messages
     
     @classmethod
     def from_env(cls) -> 'Config':
         """
-        Создает конфигурацию из переменных окружения.
+        Creates configuration from environment variables.
         
-        Переменные окружения:
-        - NOTEBOOKLM_NOTE_PREFIX: префикс для заметок
-        - NOTEBOOKLM_AUTO_SAVE: автоматическое сохранение (true/false)
-        - NOTEBOOKLM_VERBOSE: подробный вывод (true/false)
+        Environment variables:
+        - NOTEBOOKLM_NOTE_PREFIX: prefix for notes
+        - NOTEBOOKLM_AUTO_SAVE: automatic saving (true/false)
+        - NOTEBOOKLM_VERBOSE: verbose output (true/false)
         
         Returns:
-            Config с настройками из окружения или значениями по умолчанию
+            Config with settings from environment or default values
         """
         return cls(
-            note_prefix=os.getenv("NOTEBOOKLM_NOTE_PREFIX", "Заметка:"),
+            note_prefix=os.getenv("NOTEBOOKLM_NOTE_PREFIX", "Note:"),
             note_max_title_length=int(os.getenv("NOTEBOOKLM_NOTE_MAX_TITLE", "50")),
             default_auto_save=os.getenv("NOTEBOOKLM_AUTO_SAVE", "true").lower() == "true",
             default_use_optimization=os.getenv("NOTEBOOKLM_USE_OPTIMIZATION", "true").lower() == "true",
@@ -63,17 +63,17 @@ class Config:
     
     def get_note_title(self, question: str) -> str:
         """
-        Генерирует название заметки из вопроса.
+        Generates note title from question.
         
         Args:
-            question: Вопрос пользователя
+            question: User question
         
         Returns:
-            Название заметки с префиксом и обрезанным текстом
+            Note title with prefix and truncated text
         """
         question_clean = question.strip()
         
-        # Обрезаем до максимальной длины
+        # Truncate to max length
         if len(question_clean) > self.note_max_title_length:
             question_title = question_clean[:self.note_max_title_length] + "..."
         else:
@@ -82,20 +82,20 @@ class Config:
         return f"{self.note_prefix} {question_title}"
 
 
-# Глобальный экземпляр конфигурации
-# Можно переопределить через config.from_env() или создать свой экземпляр
+# Global configuration instance
+# Can be overridden via config.from_env() or create your own instance
 _config: Optional[Config] = None
 
 
 def get_config() -> Config:
     """
-    Получает глобальную конфигурацию.
+    Gets global configuration.
     
-    При первом вызове создает конфигурацию из переменных окружения.
-    Последующие вызовы возвращают кэшированный экземпляр.
+    On first call creates configuration from environment variables.
+    Subsequent calls return cached instance.
     
     Returns:
-        Config: Экземпляр конфигурации
+        Config: Configuration instance
     """
     global _config
     if _config is None:
@@ -105,14 +105,14 @@ def get_config() -> Config:
 
 def set_config(config: Config):
     """
-    Устанавливает глобальную конфигурацию.
+    Sets global configuration.
     
-    Полезно для:
-    - Тестирования (можно подставить mock-конфигурацию)
-    - Программного изменения настроек
+    Useful for:
+    - Testing (can substitute mock configuration)
+    - Programmatic setting changes
     
     Args:
-        config: Экземпляр конфигурации
+        config: Configuration instance
     """
     global _config
     _config = config

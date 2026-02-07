@@ -1,10 +1,10 @@
 """
-Утилита для построения оптимизированных запросов к блокноту.
+Utility for building optimized queries to notebook.
 
-Принципы:
-- Использование навигационной карты для точного позиционирования
-- Шаблоны запросов для стандартизации
-- Минимизация токенов через конкретные указания разделов
+Principles:
+- Using navigation map for precise positioning
+- Query templates for standardization
+- Token minimization through specific section references
 """
 
 from typing import List, Optional, Dict
@@ -13,12 +13,12 @@ from notebook_template import NavigationMap, QueryTemplate, NotebookTemplate
 
 class QueryBuilder:
     """
-    Построитель запросов для эффективной навигации.
+    Query builder for efficient navigation.
     
-    Преимущества:
-    1. Автоматическое определение релевантных разделов
-    2. Использование шаблонов для стандартизации
-    3. Оптимизация формулировок для экономии токенов
+    Advantages:
+    1. Automatic identification of relevant sections
+    2. Using templates for standardization
+    3. Query formulation optimization for token savings
     """
     
     def __init__(self, template: NotebookTemplate):
@@ -31,22 +31,22 @@ class QueryBuilder:
         section_hint: Optional[str] = None
     ) -> str:
         """
-        Строит запрос с указанием конкретного раздела.
+        Builds query with specific section reference.
         
-        Формат: "В разделе [section] найти [question]"
+        Format: "In section [section] find [question]"
         
-        Почему это эффективно:
-        - NotebookLM сразу знает, где искать
-        - Не нужно сканировать весь блокнот
-        - Экономия токенов за счет точности
+        Why this is efficient:
+        - NotebookLM immediately knows where to look
+        - No need to scan entire notebook
+        - Token savings through precision
         """
         if section_hint:
-            # Используем явную подсказку о разделе
+            # Use explicit section hint
             section = self.navigation.section_index.get(section_hint)
             if section:
-                return f"В разделе '{section.title}' найти: {question}"
+                return f"In section '{section.title}' find: {question}"
         
-        # Автоматически определяем раздел по ключевым словам
+        # Automatically determine section by keywords
         optimized = self.template.generate_optimized_query(question, use_section_hint=True)
         return optimized
     
@@ -56,9 +56,9 @@ class QueryBuilder:
         section_ids: List[str]
     ) -> str:
         """
-        Строит запрос для нескольких разделов.
+        Builds query for multiple sections.
         
-        Используется когда информация может быть в разных местах.
+        Used when information may be in different places.
         """
         section_titles = [
             self.navigation.section_index[sid].title
@@ -70,7 +70,7 @@ class QueryBuilder:
             return question
         
         sections_str = ", ".join([f"'{title}'" for title in section_titles])
-        return f"В разделах {sections_str} найти: {question}"
+        return f"In sections {sections_str} find: {question}"
     
     def build_comparison_query(
         self,
@@ -79,16 +79,16 @@ class QueryBuilder:
         section_id: Optional[str] = None
     ) -> str:
         """
-        Строит запрос для сравнения двух тем.
+        Builds query for comparing two topics.
         
-        Оптимизирован для получения только релевантных частей.
+        Optimized to get only relevant parts.
         """
-        base_query = f"Сравнить {topic1} и {topic2}"
+        base_query = f"Compare {topic1} and {topic2}"
         
         if section_id:
             section = self.navigation.section_index.get(section_id)
             if section:
-                return f"В разделе '{section.title}' {base_query}"
+                return f"In section '{section.title}' {base_query}"
         
         return base_query
     
@@ -98,51 +98,51 @@ class QueryBuilder:
         new_question: str
     ) -> str:
         """
-        Строит уточняющий запрос с учетом предыдущего контекста.
+        Builds follow-up query considering previous context.
         
-        Важно для поддержания контекста диалога без повторной загрузки данных.
+        Important for maintaining dialog context without reloading data.
         """
-        return f"Учитывая предыдущий контекст о {previous_context}, {new_question}"
+        return f"Considering previous context about {previous_context}, {new_question}"
 
 
 def create_query_templates() -> List[QueryTemplate]:
     """
-    Создает стандартные шаблоны запросов.
+    Creates standard query templates.
     
-    Шаблоны помогают:
-    - Стандартизировать формат запросов
-    - Обучить систему эффективным паттернам
-    - Упростить генерацию запросов
+    Templates help:
+    - Standardize query format
+    - Teach system effective patterns
+    - Simplify query generation
     """
     return [
         QueryTemplate(
             name="section_lookup",
-            pattern="В разделе '{section}' найти информацию о {topic}",
-            example="В разделе 'API Reference' найти информацию о методе authenticate"
+            pattern="In section '{section}' find information about {topic}",
+            example="In section 'API Reference' find information about authenticate method"
         ),
         QueryTemplate(
             name="comparison",
-            pattern="Сравнить {topic1} и {topic2} в разделе '{section}'",
-            example="Сравнить GET и POST методы в разделе 'HTTP Methods'"
+            pattern="Compare {topic1} and {topic2} in section '{section}'",
+            example="Compare GET and POST methods in section 'HTTP Methods'"
         ),
         QueryTemplate(
             name="example_search",
-            pattern="Найти примеры использования {topic}",
-            example="Найти примеры использования OAuth authentication"
+            pattern="Find examples of {topic} usage",
+            example="Find examples of OAuth authentication usage"
         ),
         QueryTemplate(
             name="definition",
-            pattern="Что такое {term} в контексте {section}?",
-            example="Что такое middleware в контексте Express.js?"
+            pattern="What is {term} in context of {section}?",
+            example="What is middleware in context of Express.js?"
         )
     ]
 
 
-# Пример использования
+# Usage example
 if __name__ == "__main__":
-    # TODO: Реализовать полный пример после создания блокнота
-    print("QueryBuilder готов к использованию")
-    print("Примеры шаблонов:")
+    # TODO: Implement full example after notebook creation
+    print("QueryBuilder ready to use")
+    print("Template examples:")
     for template in create_query_templates():
         print(f"  - {template.name}: {template.example}")
 

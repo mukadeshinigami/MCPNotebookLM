@@ -1,15 +1,16 @@
 """
-Утилита для тестирования запросов к блокноту через API.
+Utility for testing notebook queries via API.
 
-Используется для:
-1. Тестирования запросов перед использованием в Cursor
-2. Отладки проблем с запросами
-3. Демонстрации оптимизированных запросов
-4. Автоматического сохранения ответов в заметки
+Used for:
+1. Testing queries before using in Cursor
+2. Debugging query issues
+3. Demonstrating optimized queries
+4. Automatically saving responses as notes
 """
 
 import sys
 import json
+from typing import Optional
 from notebooklm_mcp.api_client import NotebookLMClient
 from query_builder import QueryBuilder
 from notebook_template import NotebookTemplate
@@ -19,10 +20,10 @@ from config import get_config
 
 
 def list_notebooks():
-    """Выводит список всех блокнотов"""
+    """Lists all notebooks"""
     client = get_notebooklm_client()
     if not client:
-        print("❌ Ошибка: Токены не найдены. Запустите notebooklm-mcp-auth")
+        print("❌ Error: Tokens not found. Run notebooklm-mcp-auth")
         return None
     
     notebooks = client.list_notebooks()
@@ -36,36 +37,36 @@ def query_notebook_direct(
     auto_save: Optional[bool] = None
 ):
     """
-    Прямой запрос к блокноту через API с автоматическим сохранением ответа.
+    Direct query to notebook via API with automatic response saving.
     
     Args:
-        notebook_id: ID блокнота
-        question: Вопрос для запроса
-        use_optimization: Использовать оптимизацию через навигацию (по умолчанию из конфигурации)
-        auto_save: Автоматически сохранять ответ как заметку (по умолчанию из конфигурации)
+        notebook_id: Notebook ID
+        question: Question for query
+        use_optimization: Use optimization via navigation (default from configuration)
+        auto_save: Automatically save response as note (default from configuration)
     
     Returns:
-        Ответ от NotebookLM (и ID источника, если auto_save=True)
+        Response from NotebookLM (and source ID if auto_save=True)
     """
     config = get_config()
     client = get_notebooklm_client()
     
     if not client:
-        print("❌ Ошибка: Токены не найдены")
+        print("❌ Error: Tokens not found")
         return None
     
-    # Используем значения из параметров или конфигурации
+    # Use values from parameters or configuration
     should_optimize = use_optimization if use_optimization is not None else config.default_use_optimization
     should_save = auto_save if auto_save is not None else config.default_auto_save
     
-    # Если используем оптимизацию, пытаемся загрузить структуру
+    # If using optimization, try to load structure
     if should_optimize:
-        # TODO: Загрузить структуру блокнота из сохраненного файла
-        # Пока просто используем вопрос как есть, но с подсказкой об оптимизации
+        # TODO: Load notebook structure from saved file
+        # For now just use question as is, but with optimization hint
         if config.verbose:
-            print("💡 Совет: Используйте формат 'В разделе [название] найти [тема]' для экономии токенов")
+            print("💡 Tip: Use format 'In section [name] find [topic]' to save tokens")
     
-    # Используем функцию с автосохранением, если включено
+    # Use function with auto-save if enabled
     if should_save:
         answer, source_id = query_and_save(
             notebook_id=notebook_id,
@@ -75,143 +76,143 @@ def query_notebook_direct(
         )
         return answer
     else:
-        # Выполняем запрос без автосохранения
+        # Execute query without auto-save
         try:
             response = client.query(notebook_id, question)
             return response
         except Exception as e:
-            print(f"❌ Ошибка при запросе: {e}")
+            print(f"❌ Error during query: {e}")
             import traceback
             traceback.print_exc()
             return None
 
 
 def interactive_query():
-    """Интерактивный режим для запросов"""
+    """Interactive mode for queries"""
     print("="*60)
-    print("🔍 Интерактивный запрос к блокноту NotebookLM")
+    print("🔍 Interactive NotebookLM notebook query")
     print("="*60)
     
-    # Список блокнотов
-    print("\n📚 Загрузка списка блокнотов...")
+    # List notebooks
+    print("\n📚 Loading notebook list...")
     notebooks = list_notebooks()
     
     if not notebooks:
-        print("❌ Не удалось загрузить блокноты")
+        print("❌ Failed to load notebooks")
         return
     
-    print(f"\n✅ Найдено блокнотов: {len(notebooks)}")
-    print("\nДоступные блокноты:")
+    print(f"\n✅ Found notebooks: {len(notebooks)}")
+    print("\nAvailable notebooks:")
     for i, notebook in enumerate(notebooks, 1):
         print(f"  {i}. {notebook.title} (ID: {notebook.id})")
     
-    # Выбор блокнота
+    # Select notebook
     try:
-        choice = input("\nВыберите номер блокнота (или введите ID): ").strip()
+        choice = input("\nSelect notebook number (or enter ID): ").strip()
         
         if choice.isdigit():
             idx = int(choice) - 1
             if 0 <= idx < len(notebooks):
                 selected_notebook = notebooks[idx]
             else:
-                print("❌ Неверный номер")
+                print("❌ Invalid number")
                 return
         else:
-            # Поиск по ID
+            # Search by ID
             selected_notebook = next((n for n in notebooks if n.id == choice), None)
             if not selected_notebook:
-                print("❌ Блокнот не найден")
+                print("❌ Notebook not found")
                 return
         
-        print(f"\n✅ Выбран блокнот: {selected_notebook.title}")
+        print(f"\n✅ Selected notebook: {selected_notebook.title}")
         print(f"   ID: {selected_notebook.id}")
         
-        # Запрос
+        # Query
         print("\n" + "-"*60)
-        print("💡 Совет: Используйте формат 'В разделе [название] найти [тема]'")
-        print("   Пример: 'В разделе 'Основы Python' найти информацию о функциях'")
+        print("💡 Tip: Use format 'In section [name] find [topic]'")
+        print("   Example: 'In section 'Python Basics' find information about functions'")
         print("-"*60)
         
-        question = input("\nВведите ваш вопрос: ").strip()
+        question = input("\nEnter your question: ").strip()
         
         if not question:
-            print("❌ Вопрос не может быть пустым")
+            print("❌ Question cannot be empty")
             return
         
-        # Спрашиваем, нужно ли автосохранение
-        save_note = input("\n💾 Автоматически сохранить ответ как заметку? (Y/n): ").strip().lower()
+        # Ask about auto-save
+        save_note = input("\n💾 Automatically save response as note? (Y/n): ").strip().lower()
         auto_save = save_note != 'n'
         
-        print("\n⏳ Выполнение запроса...")
+        print("\n⏳ Executing query...")
         response = query_notebook_direct(selected_notebook.id, question, auto_save=auto_save)
         
         if response:
             print("\n" + "="*60)
-            print("📝 Ответ:")
+            print("📝 Answer:")
             print("="*60)
             print(response)
             print("="*60)
             if auto_save:
-                print("\n✅ Ответ автоматически сохранен как заметка в блокноте")
+                print("\n✅ Response automatically saved as note in notebook")
         else:
-            print("\n❌ Не удалось получить ответ")
+            print("\n❌ Failed to get response")
             
     except KeyboardInterrupt:
-        print("\n\n👋 Выход...")
+        print("\n\n👋 Exiting...")
     except Exception as e:
-        print(f"\n❌ Ошибка: {e}")
+        print(f"\n❌ Error: {e}")
         import traceback
         traceback.print_exc()
 
 
 def main():
-    """Главная функция"""
+    """Main function"""
     if len(sys.argv) == 1:
-        # Интерактивный режим
+        # Interactive mode
         interactive_query()
     elif len(sys.argv) == 3:
-        # Режим с аргументами: notebook_id question
+        # Mode with arguments: notebook_id question
         notebook_id = sys.argv[1]
         question = sys.argv[2]
         
-        print(f"📋 Блокнот ID: {notebook_id}")
-        print(f"❓ Вопрос: {question}\n")
+        print(f"📋 Notebook ID: {notebook_id}")
+        print(f"❓ Question: {question}\n")
         
-        # По умолчанию автосохранение включено
+        # Auto-save enabled by default
         response = query_notebook_direct(notebook_id, question, auto_save=True)
         
         if response:
-            print("\n📝 Ответ:")
+            print("\n📝 Answer:")
             print("-"*60)
             print(response)
             print("-"*60)
-            print("\n✅ Ответ автоматически сохранен как заметка в блокноте")
+            print("\n✅ Response automatically saved as note in notebook")
         else:
-            print("\n❌ Не удалось получить ответ")
+            print("\n❌ Failed to get response")
             sys.exit(1)
     elif len(sys.argv) == 4 and sys.argv[3] in ['--no-save', '--no-auto-save']:
-        # Режим с отключенным автосохранением
+        # Mode with auto-save disabled
         notebook_id = sys.argv[1]
         question = sys.argv[2]
         
-        print(f"📋 Блокнот ID: {notebook_id}")
-        print(f"❓ Вопрос: {question}\n")
+        print(f"📋 Notebook ID: {notebook_id}")
+        print(f"❓ Question: {question}\n")
         
         response = query_notebook_direct(notebook_id, question, auto_save=False)
         
         if response:
-            print("\n📝 Ответ:")
+            print("\n📝 Answer:")
             print("-"*60)
             print(response)
             print("-"*60)
         else:
-            print("\n❌ Не удалось получить ответ")
+            print("\n❌ Failed to get response")
             sys.exit(1)
     else:
-        print("Использование:")
-        print("  python3 query_notebook_mcp.py                    # Интерактивный режим")
+        print("Usage:")
+        print("  python3 query_notebook_mcp.py                    # Interactive mode")
         print("  python3 query_notebook_mcp.py <notebook_id> <question>")
-        print("  python3 query_notebook_mcp.py <notebook_id> <question> --no-save  # Без автосохранения")
+        print("  python3 query_notebook_mcp.py <notebook_id> <question> --no-save  # Without auto-save")
         sys.exit(1)
 
 

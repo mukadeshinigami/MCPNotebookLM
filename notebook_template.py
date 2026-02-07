@@ -1,11 +1,11 @@
 """
-Шаблон для создания структурированных блокнотов NotebookLM
-с оптимизированной навигацией для экономии токенов.
+Template for creating structured NotebookLM notebooks
+with optimized navigation for token savings.
 
-Архитектура:
-- Иерархическая структура источников с метаданными
-- Навигационная карта для точного позиционирования
-- Шаблоны запросов для эффективного поиска
+Architecture:
+- Hierarchical source structure with metadata
+- Navigation map for precise positioning
+- Query templates for efficient search
 """
 
 import sys
@@ -18,7 +18,7 @@ from client_factory import get_notebooklm_client
 
 
 class SourceType(Enum):
-    """Типы источников для лучшей категоризации"""
+    """Source types for better categorization"""
     DOCUMENTATION = "documentation"
     CODE = "code"
     TUTORIAL = "tutorial"
@@ -30,29 +30,29 @@ class SourceType(Enum):
 @dataclass
 class SourceMetadata:
     """
-    Метаданные источника для улучшения индексации и навигации.
+    Source metadata for improved indexing and navigation.
     
-    Почему это важно:
-    - NotebookLM использует метаданные для лучшей релевантности
-    - Теги позволяют делать точные запросы по категориям
-    - Краткое описание помогает AI понять контекст без чтения всего источника
+    Why this is important:
+    - NotebookLM uses metadata for better relevance
+    - Tags allow precise queries by category
+    - Brief description helps AI understand context without reading entire source
     """
     title: str
     category: str
     tags: List[str] = field(default_factory=list)
     description: str = ""
     source_type: SourceType = SourceType.DOCUMENTATION
-    priority: int = 5  # 1-10, где 10 - самый важный
+    priority: int = 5  # 1-10, where 10 is most important
     related_sections: List[str] = field(default_factory=list)
 
 
 @dataclass
 class NavigationNode:
     """
-    Узел навигационной карты. 
+    Navigation map node.
     
-    Используется для создания иерархической структуры,
-    которая помогает MCP делать точные запросы к конкретным разделам.
+    Used to create hierarchical structure
+    that helps MCP make precise queries to specific sections.
     """
     section_id: str
     title: str
@@ -65,12 +65,12 @@ class NavigationNode:
 @dataclass
 class QueryTemplate:
     """
-    Шаблон запроса для точной навигации.
+    Query template for precise navigation.
     
-    Преимущества:
-    - Предопределенные паттерны запросов
-    - Указание конкретных разделов для экономии токенов
-    - Стандартизация формата запросов
+    Advantages:
+    - Predefined query patterns
+    - Specifying specific sections to save tokens
+    - Standardization of query format
     """
     name: str
     pattern: str
@@ -80,12 +80,12 @@ class QueryTemplate:
 
 class NavigationMap:
     """
-    Карта навигации блокнота.
+    Notebook navigation map.
     
-    Позволяет:
-    1. Быстро находить релевантные разделы по ключевым словам
-    2. Строить иерархию для точных запросов
-    3. Генерировать навигационные запросы автоматически
+    Allows:
+    1. Quickly find relevant sections by keywords
+    2. Build hierarchy for precise queries
+    3. Automatically generate navigation queries
     """
     
     def __init__(self):
@@ -103,18 +103,18 @@ class NavigationMap:
         metadata: Optional[SourceMetadata] = None
     ) -> NavigationNode:
         """
-        Добавляет раздел в навигационную карту.
+        Adds a section to the navigation map.
         
         Args:
-            section_id: Уникальный идентификатор раздела
-            title: Название раздела
-            description: Описание содержимого
-            keywords: Ключевые слова для поиска
-            parent_id: ID родительского раздела (для иерархии)
-            metadata: Метаданные источника
+            section_id: Unique section identifier
+            title: Section title
+            description: Content description
+            keywords: Search keywords
+            parent_id: Parent section ID (for hierarchy)
+            metadata: Source metadata
         
         Returns:
-            Созданный узел навигации
+            Created navigation node
         """
         node = NavigationNode(
             section_id=section_id,
@@ -124,19 +124,19 @@ class NavigationMap:
             source_metadata=metadata
         )
         
-        # Индексируем по ключевым словам
+        # Index by keywords
         for keyword in keywords:
             if keyword.lower() not in self.keyword_index:
                 self.keyword_index[keyword.lower()] = []
             self.keyword_index[keyword.lower()].append(section_id)
         
-        # Добавляем в иерархию
+        # Add to hierarchy
         if parent_id:
             parent = self.section_index.get(parent_id)
             if parent:
                 parent.children.append(node)
             else:
-                # Если родитель не найден, добавляем как корневой
+                # If parent not found, add as root
                 self.root_nodes.append(node)
         else:
             self.root_nodes.append(node)
@@ -145,50 +145,50 @@ class NavigationMap:
         return node
     
     def find_sections_by_keyword(self, keyword: str) -> List[NavigationNode]:
-        """Находит разделы по ключевому слову"""
+        """Finds sections by keyword"""
         keyword_lower = keyword.lower()
         section_ids = self.keyword_index.get(keyword_lower, [])
         return [self.section_index[sid] for sid in section_ids if sid in self.section_index]
     
     def generate_navigation_query(self, topic: str) -> str:
         """
-        Генерирует оптимизированный запрос для навигации.
+        Generates optimized query for navigation.
         
-        Формат: "В разделе [section] найти информацию о [topic]"
-        Это помогает NotebookLM точно определить релевантную секцию.
+        Format: "In section [section] find information about [topic]"
+        This helps NotebookLM precisely identify the relevant section.
         """
         sections = self.find_sections_by_keyword(topic)
         if not sections:
-            return f"Найти информацию о {topic}"
+            return f"Find information about {topic}"
         
-        # Используем первый найденный раздел для точности
+        # Use first found section for precision
         section_title = sections[0].title
-        return f"В разделе '{section_title}' найти информацию о {topic}"
+        return f"In section '{section_title}' find information about {topic}"
 
 
 class NotebookTemplate:
     """
-    Шаблон для создания структурированного блокнота.
+    Template for creating structured notebooks.
     
-    Принципы работы:
-    1. Структурирует источники с метаданными
-    2. Создает навигационную карту
-    3. Генерирует оптимизированные запросы
-    4. Экономит токены через точную навигацию
+    Working principles:
+    1. Structures sources with metadata
+    2. Creates navigation map
+    3. Generates optimized queries
+    4. Saves tokens through precise navigation
     """
     
     def __init__(self, client: Optional[NotebookLMClient] = None):
         """
-        Инициализирует шаблон блокнота.
+        Initializes notebook template.
         
         Args:
-            client: Клиент NotebookLM. Если не указан, будет создан автоматически через ClientFactory
+            client: NotebookLM client. If not specified, will be created automatically via ClientFactory
         """
-        # Если клиент не передан, создаем через фабрику
+        # If client not provided, create via factory
         if client is None:
             client = get_notebooklm_client()
             if not client:
-                raise RuntimeError("Не удалось создать клиент. Запустите notebooklm-mcp-auth")
+                raise RuntimeError("Failed to create client. Run notebooklm-mcp-auth")
         
         self.client = client
         self.navigation = NavigationMap()
@@ -197,25 +197,25 @@ class NotebookTemplate:
     
     def create_notebook(self, title: str, description: str = "") -> str:
         """
-        Создает новый блокнот с указанным названием.
+        Creates a new notebook with specified title.
         
         Returns:
-            ID созданного блокнота
+            ID of created notebook
         """
         notebook = self.client.create_notebook(title)
         if not notebook:
-            raise RuntimeError("Не удалось создать блокнот")
+            raise RuntimeError("Failed to create notebook")
         
         self.notebook_id = notebook.id
         
-        # Добавляем описание как первый источник для контекста
+        # Add description as first source for context
         if description:
             self._add_index_source(description)
         
         return notebook.id
     
     def _add_index_source(self, content: str):
-        """Добавляет индексный источник с описанием структуры"""
+        """Adds index source with structure description"""
         if not self.notebook_id:
             return None
         
@@ -223,11 +223,11 @@ class NotebookTemplate:
             result = self.client.add_text_source(
                 notebook_id=self.notebook_id,
                 text=content,
-                title="Описание структуры блокнота"
+                title="Notebook structure description"
             )
             return result
         except Exception as e:
-            print(f"Предупреждение: Не удалось добавить индексный источник: {e}")
+            print(f"Warning: Failed to add index source: {e}")
             return None
     
     def add_source_with_metadata(
@@ -238,28 +238,28 @@ class NotebookTemplate:
         section_id: Optional[str] = None
     ) -> str:
         """
-        Добавляет источник с метаданными для улучшенной индексации.
+        Adds source with metadata for improved indexing.
         
         Args:
-            source_url: URL источника (веб-сайт или Google Drive)
-            source_text: Текст для вставки
-            metadata: Метаданные источника
-            section_id: ID раздела для навигации
+            source_url: Source URL (website or Google Drive)
+            source_text: Text to insert
+            metadata: Source metadata
+            section_id: Section ID for navigation
         
         Returns:
-            ID добавленного источника
+            ID of added source
         """
         if not self.notebook_id:
-            raise RuntimeError("Сначала создайте блокнот")
+            raise RuntimeError("Create notebook first")
         
-        # Формируем префикс с метаданными для лучшей индексации
+        # Format metadata prefix for better indexing
         metadata_prefix = self._format_metadata_prefix(metadata)
         
         source_id = None
         
-        # Добавляем источник
+        # Add source
         if source_text:
-            # Для текстовых источников добавляем метаданные в начало
+            # For text sources, add metadata at the beginning
             full_text = metadata_prefix + "\n\n" + source_text
             try:
                 result = self.client.add_text_source(
@@ -270,11 +270,11 @@ class NotebookTemplate:
                 if result:
                     source_id = result.get('sourceId') or result.get('id') or f"source_{metadata.title.lower().replace(' ', '_')}"
             except Exception as e:
-                print(f"Ошибка при добавлении текстового источника: {e}")
+                print(f"Error adding text source: {e}")
                 raise
         
         elif source_url:
-            # Для URL источников метаданные только в навигации
+            # For URL sources, metadata only in navigation
             try:
                 result = self.client.add_url_source(
                     notebook_id=self.notebook_id,
@@ -284,12 +284,12 @@ class NotebookTemplate:
                 if result:
                     source_id = result.get('sourceId') or result.get('id') or f"source_{metadata.title.lower().replace(' ', '_')}"
             except Exception as e:
-                print(f"Ошибка при добавлении URL источника: {e}")
+                print(f"Error adding URL source: {e}")
                 raise
         else:
-            raise ValueError("Необходимо указать либо source_text, либо source_url")
+            raise ValueError("Must specify either source_text or source_url")
         
-        # Добавляем в навигацию
+        # Add to navigation
         section_id = section_id or metadata.title.lower().replace(" ", "_")
         self.navigation.add_section(
             section_id=section_id,
@@ -303,30 +303,30 @@ class NotebookTemplate:
     
     def _format_metadata_prefix(self, metadata: SourceMetadata) -> str:
         """
-        Форматирует метаданные как префикс для источника.
+        Formats metadata as prefix for source.
         
-        Это помогает NotebookLM лучше индексировать контент.
+        This helps NotebookLM better index content.
         """
         lines = [
             f"# {metadata.title}",
-            f"**Категория:** {metadata.category}",
-            f"**Тип:** {metadata.source_type.value}",
+            f"**Category:** {metadata.category}",
+            f"**Type:** {metadata.source_type.value}",
         ]
         
         if metadata.tags:
-            lines.append(f"**Теги:** {', '.join(metadata.tags)}")
+            lines.append(f"**Tags:** {', '.join(metadata.tags)}")
         
         if metadata.description:
-            lines.append(f"**Описание:** {metadata.description}")
+            lines.append(f"**Description:** {metadata.description}")
         
         if metadata.related_sections:
-            lines.append(f"**Связанные разделы:** {', '.join(metadata.related_sections)}")
+            lines.append(f"**Related sections:** {', '.join(metadata.related_sections)}")
         
         lines.append("---\n")
         return "\n".join(lines)
     
     def add_query_template(self, template: QueryTemplate):
-        """Добавляет шаблон запроса для стандартизации"""
+        """Adds query template for standardization"""
         self.query_templates.append(template)
     
     def generate_optimized_query(
@@ -335,17 +335,17 @@ class NotebookTemplate:
         use_section_hint: bool = True
     ) -> str:
         """
-        Генерирует оптимизированный запрос с учетом навигации.
+        Generates optimized query considering navigation.
         
         Args:
-            question: Вопрос пользователя
-            use_section_hint: Использовать подсказки о разделе для точности
+            question: User question
+            use_section_hint: Use section hints for precision
         
         Returns:
-            Оптимизированный запрос для NotebookLM
+            Optimized query for NotebookLM
         """
         if use_section_hint:
-            # Пытаемся найти релевантный раздел
+            # Try to find relevant section
             query = self.navigation.generate_navigation_query(question)
             return query
         
@@ -353,11 +353,11 @@ class NotebookTemplate:
     
     def get_navigation_summary(self) -> str:
         """
-        Возвращает текстовое описание структуры блокнота.
+        Returns text description of notebook structure.
         
-        Используется для создания индексного источника.
+        Used for creating index source.
         """
-        lines = ["# Навигационная карта блокнота\n"]
+        lines = ["# Notebook navigation map\n"]
         
         def format_node(node: NavigationNode, level: int = 0):
             indent = "  " * level
@@ -365,7 +365,7 @@ class NotebookTemplate:
             if node.description:
                 lines.append(f"{indent}  {node.description}")
             if node.keywords:
-                lines.append(f"{indent}  Ключевые слова: {', '.join(node.keywords)}")
+                lines.append(f"{indent}  Keywords: {', '.join(node.keywords)}")
             lines.append("")
             
             for child in node.children:
