@@ -9,6 +9,7 @@ This repository provides a Model Context Protocol (MCP) server for [NotebookLM](
 - **Manage Sources**: Add websites, Google Drive documents, or pasted text to your notebooks.
 - **Query Notebooks**: Ask questions about your sources using the NotebookLM AI.
 - **Conversation History**: Full support for follow-up questions and conversation context.
+- **Auto-Save Notes**: Automatically save AI responses as notes in your notebooks.
 
 ## Prerequisites
 
@@ -25,35 +26,78 @@ cd MCPNotebookLM
 ```
 
 ### 2. Set up the environment
-Run the provided setup script to install dependencies and authenticate:
+
+Install dependencies:
 ```bash
-chmod +x setup.sh
-./setup.sh
+pip install -r requirements.txt
+```
+
+Authenticate with NotebookLM:
+```bash
+notebooklm-mcp-auth
 ```
 Follow the prompts to authorize the application. This will create a local `auth.json` file in `~/.notebooklm-mcp/`.
 
 ### 3. Configure your MCP Client
-Add the server to your `mcp_config.json`. **Use the absolute path** to the `notebooklm-mcp` binary (usually in your local bin after installation).
 
-Example configuration:
-```json
-{
-  "mcpServers": {
-    "notebooklm": {
-      "command": "/home/YOUR_USER/.local/bin/notebooklm-mcp",
-      "args": [],
-      "env": {}
-    }
-  }
-}
-```
+**For Cursor:**
+1. Copy `mcp_config.json.example` to your Cursor config directory:
+   - Linux: `~/.config/cursor/mcp.json`
+   - macOS: `~/Library/Application Support/Cursor/mcp.json`
+   - Windows: `%APPDATA%\Cursor\mcp.json`
 
-## Usage Example
+2. Edit the `command` field with the absolute path to `notebooklm-mcp`:
+   ```json
+   {
+     "mcpServers": {
+       "notebooklm": {
+         "command": "/home/YOUR_USER/.local/bin/notebooklm-mcp",
+         "args": [],
+         "env": {}
+       }
+     }
+   }
+   ```
 
-You can test your setup using the included `example_usage.py`:
+3. Find the binary path:
+   ```bash
+   which notebooklm-mcp
+   # or
+   ls ~/.local/bin/notebooklm-mcp
+   ```
+
+4. Restart Cursor to apply the configuration.
+
+## Usage Examples
+
+### Basic Usage
+
+Test your setup by listing notebooks:
 ```bash
-python3 example_usage.py
+python3 query_notebook_mcp.py
 ```
+
+Or query a notebook directly:
+```bash
+python3 query_notebook_mcp.py <notebook_id> "Your question"
+```
+
+### Auto-Save Notes Feature
+
+The repository includes an automatic note-saving feature that saves all AI responses as notes in your notebooks. This is especially useful when working through MCP API, as responses aren't automatically saved in the web interface history.
+
+**Quick start:**
+```python
+from auto_save_notes import query_and_save
+
+answer, source_id = query_and_save(
+    notebook_id="your-notebook-id",
+    question="What is Python?",
+    auto_save=True
+)
+```
+
+See `docs/AUTO_SAVE_NOTES.md` for detailed documentation (if available locally).
 
 ## Security Note
 

@@ -34,3 +34,6 @@ mcp_config.json
 *.swp
 *.swo
 .DS_Store
+
+# Documentation (moved to docs/)
+docs/
