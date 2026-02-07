@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "notebooklm": {
+      "command": "/path/to/your/.local/bin/notebooklm-mcp",
+      "args": [],
+      "env": {},
+      "disabledTools": []
+    }
+  }
+}

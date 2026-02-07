@@ -1,0 +1,4 @@
+notebooklm-mcp-server>=0.1.15
+fastmcp
+httpx
+websocket-client
